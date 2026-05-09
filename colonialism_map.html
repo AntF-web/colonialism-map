@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Colonialism Expansion Flow Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root {
+      --bg: #08111f;
+      --panel: rgba(10, 18, 32, 0.84);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --origin: #f59e0b;     /* imperial power */
+      --market: #38bdf8;     /* colonized territory */
+      --flow: #f43f5e;
+      --secondary: #a78bfa;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    #map {
+      width: 100vw;
+      height: 100vh;
+      background: #08111f;
+      filter: saturate(0.8) contrast(1.08);
+      z-index: 0;
+    }
+
+    .leaflet-control-attribution { display: none; }
+
+    .panel {
+      position: absolute;
+      z-index: 1000;
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      backdrop-filter: blur(16px);
+    }
+
+    .header {
+      top: 16px;
+      left: 16px;
+      max-width: 345px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      opacity: .92;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(20px, 2.6vw, 30px);
+      line-height: 1;
+      letter-spacing: -0.055em;
+    }
+
+    .small {
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 12px;
+      margin-top: 12px;
+      font-size: 11px;
+      color: #cbd5e1;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+    }
+
+    .story-card {
+      right: 18px;
+      bottom: 92px;
+      width: 340px;
+      max-height: 44vh;
+      overflow: auto;
+      padding: 16px;
+      border-radius: 22px;
+      opacity: .92;
+    }
+
+    .period {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(244,63,94,.16);
+      color: #fecdd3;
+      font-weight: 800;
+      font-size: 11px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .story-title {
+      margin: 12px 0 7px;
+      font-size: 23px;
+      line-height: 1.05;
+      letter-spacing: -0.045em;
+    }
+
+    .route {
+      margin: 0;
+      color: #dbeafe;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .description {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    .audio-box {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .audio-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, .12);
+      border: 1px solid rgba(56, 189, 248, .26);
+      color: #bae6fd;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .audio-note {
+      width: 100%;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .filter-list {
+      margin: 12px 0 0;
+      display: grid;
+      gap: 8px;
+      max-height: 190px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .filter-route {
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(255,255,255,.05);
+      cursor: pointer;
+      color: #e2e8f0;
+      font-size: 12px;
+    }
+
+    .filter-route:hover { background: rgba(255,255,255,.10); }
+    .filter-route strong { color: white; }
+
+    .timeline {
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 18px;
+      width: min(680px, 92vw);
+      padding: 12px;
+      border-radius: 999px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 42px 1fr 88px 96px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    button {
+      height: 42px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.10);
+      color: white;
+      cursor: pointer;
+      transition: transform .2s, background .2s;
+      font-weight: 900;
+    }
+
+    #play { width: 42px; font-size: 17px; }
+    #reset { padding: 0 12px; font-size: 12px; }
+
+    button:hover {
+      transform: scale(1.04);
+      background: rgba(255,255,255,.16);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      appearance: none;
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--origin), var(--secondary), var(--flow));
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #fff;
+      border: 5px solid var(--flow);
+      box-shadow: 0 4px 18px rgba(244,63,94,.55);
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #fff;
+      border: 5px solid var(--flow);
+      box-shadow: 0 4px 18px rgba(244,63,94,.55);
+      cursor: pointer;
+    }
+
+    .year {
+      text-align: right;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+    }
+
+    .city-label {
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: rgba(8, 17, 31, .82);
+      border: 1px solid rgba(255,255,255,.13);
+      color: #f8fafc;
+      font-size: 11px;
+      font-weight: 800;
+      box-shadow: 0 6px 22px rgba(0,0,0,.28);
+      white-space: nowrap;
+    }
+
+    .node {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 0 0 8px rgba(255,255,255,.08), 0 0 24px currentColor;
+      cursor: pointer;
+    }
+
+    .origin { background: var(--origin); color: var(--origin); }
+    .market { background: var(--market); color: var(--market); }
+
+    .active-node { animation: pulse 1.55s ease-in-out infinite; }
+    .selected-node { box-shadow: 0 0 0 10px rgba(167,139,250,.25), 0 0 32px #a78bfa; }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.45); }
+    }
+
+    .flow-main {
+      stroke-linecap: round;
+      stroke-dasharray: 1 16;
+      animation: flow 1.1s linear infinite;
+      filter: drop-shadow(0 0 10px rgba(244,63,94,.75));
+    }
+
+    .flow-filter {
+      stroke-linecap: round;
+      stroke-dasharray: 8 13;
+      animation: flow 1.8s linear infinite;
+      filter: drop-shadow(0 0 8px rgba(167,139,250,.65));
+    }
+
+    .flow-glow {
+      stroke-linecap: round;
+      opacity: .24;
+      filter: blur(1px);
+    }
+
+    @keyframes flow { to { stroke-dashoffset: -34; } }
+
+    .flow-tag {
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: rgba(244,63,94,.92);
+      color: white;
+      font-size: 11px;
+      font-weight: 900;
+      box-shadow: 0 10px 30px rgba(244,63,94,.35);
+      white-space: nowrap;
+    }
+
+    .hover-preview {
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(8,17,31,.94);
+      color: white;
+      border: 1px solid rgba(255,255,255,.14);
+      box-shadow: 0 10px 34px rgba(0,0,0,.36);
+      min-width: 190px;
+    }
+
+    .hover-preview strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .hover-preview span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip {
+      background: rgba(8,17,31,.94);
+      color: white;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+    }
+
+    .leaflet-popup-content {
+      margin: 12px 14px;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    @media (min-width: 1200px) {
+      .header { max-width: 360px; }
+      .story-card { width: 380px; max-height: 46vh; }
+      .timeline { width: min(760px, 70vw); }
+    }
+
+    @media (max-width: 1024px) {
+      .header {
+        top: 14px;
+        left: 14px;
+        max-width: 300px;
+        padding: 13px 15px;
+      }
+
+      .story-card {
+        right: 14px;
+        bottom: 88px;
+        width: 310px;
+        max-height: 38vh;
+      }
+
+      .timeline { width: min(650px, 88vw); }
+      .city-label { font-size: 10px; padding: 5px 8px; }
+    }
+
+    @media (max-width: 760px) {
+      #map { height: 100dvh; }
+
+      .header {
+        top: max(10px, env(safe-area-inset-top));
+        left: 10px;
+        width: min(260px, calc(100vw - 20px));
+        max-width: none;
+        padding: 11px 13px;
+        border-radius: 18px;
+        opacity: .88;
+      }
+
+      h1 {
+        font-size: 17px;
+        letter-spacing: -0.04em;
+      }
+
+      .small { display: none; }
+
+      .legend {
+        margin-top: 8px;
+        gap: 7px 9px;
+        font-size: 10px;
+      }
+
+      .legend-dot {
+        width: 8px;
+        height: 8px;
+      }
+
+      .story-card {
+        left: 10px;
+        right: 10px;
+        bottom: calc(78px + env(safe-area-inset-bottom));
+        width: auto;
+        max-height: 32dvh;
+        overflow: auto;
+        padding: 13px;
+        border-radius: 20px;
+        opacity: .91;
+      }
+
+      .story-card::before {
+        content: "";
+        display: block;
+        width: 44px;
+        height: 4px;
+        margin: 0 auto 9px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.28);
+      }
+
+      .period {
+        font-size: 10px;
+        padding: 5px 8px;
+      }
+
+      .story-title {
+        margin: 9px 0 6px;
+        font-size: 19px;
+      }
+
+      .route { font-size: 13px; }
+
+      .description {
+        margin-top: 8px;
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .audio-box { margin-top: 9px; }
+
+      .audio-link {
+        flex: 1 1 44%;
+        justify-content: center;
+        padding: 9px;
+        font-size: 11px;
+      }
+
+      .audio-note { display: none; }
+
+      .filter-list {
+        max-height: 145px;
+        gap: 7px;
+      }
+
+      .filter-route {
+        padding: 9px;
+        font-size: 11px;
+      }
+
+      .timeline {
+        left: 10px;
+        right: 10px;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        width: auto;
+        transform: none;
+        padding: 10px;
+        border-radius: 22px;
+      }
+
+      .controls {
+        grid-template-columns: 44px 1fr 54px;
+        gap: 10px;
+      }
+
+      button {
+        height: 44px;
+        min-width: 44px;
+      }
+
+      #play { width: 44px; }
+
+      #reset {
+        display: block;
+        padding: 0 10px;
+        font-size: 10px;
+      }
+
+      .year { display: none; }
+
+      input[type="range"] { height: 10px; }
+
+      input[type="range"]::-webkit-slider-thumb {
+        width: 28px;
+        height: 28px;
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+      }
+
+      .city-label { display: none; }
+
+      .node {
+        width: 22px;
+        height: 22px;
+        border-width: 3px;
+        box-shadow: 0 0 0 9px rgba(255,255,255,.08), 0 0 22px currentColor;
+      }
+
+      .active-node { animation: pulse 1.25s ease-in-out infinite; }
+      .flow-main { stroke-dasharray: 1 14; }
+
+      .flow-tag {
+        font-size: 10px;
+        padding: 6px 9px;
+      }
+
+      .hover-preview { display: none; }
+    }
+
+    @media (max-width: 480px) {
+      .header {
+        width: min(220px, calc(100vw - 20px));
+        padding: 10px 12px;
+      }
+
+      h1 { font-size: 16px; }
+      .legend { display: none; }
+
+      .story-card {
+        max-height: 28dvh;
+        padding: 12px;
+      }
+
+      .story-title { font-size: 18px; }
+      .description { display: none; }
+
+      .controls {
+        grid-template-columns: 42px 1fr 50px;
+      }
+
+      button {
+        height: 42px;
+        min-width: 42px;
+      }
+    }
+
+    @media (max-height: 620px) and (max-width: 760px) {
+      .header { opacity: .78; }
+      .story-card { max-height: 24dvh; }
+      .story-title { font-size: 17px; }
+      .description,
+      .audio-note { display: none; }
+    }
+
+    @media (orientation: landscape) and (max-height: 520px) {
+      .header { width: 230px; }
+
+      .story-card {
+        top: 10px;
+        right: 10px;
+        bottom: auto;
+        left: auto;
+        width: min(320px, 38vw);
+        max-height: calc(100dvh - 86px);
+      }
+
+      .timeline {
+        left: 50%;
+        right: auto;
+        width: min(520px, 54vw);
+        transform: translateX(-50%);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <section class="panel header">
+    <h1>Colonialism: Expansion Flow Map</h1>
+    <p class="small">
+      Click any city or territory to filter connected colonial routes. Hover for a quick preview.
+      This map is a broad historical overview, using city markers as geographic proxies for larger imperial systems and colonized regions.
+    </p>
+    <div class="legend">
+      <div class="legend-item"><span class="legend-dot" style="background:var(--origin)"></span>imperial power</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--market)"></span>colonized territory</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--flow)"></span>timeline</div>
+      <div class="legend-item"><span class="legend-dot" style="background:var(--secondary)"></span>filter</div>
+    </div>
+  </section>
+
+  <section class="panel story-card" id="story" aria-live="polite"></section>
+
+  <section class="panel timeline">
+    <div class="controls">
+      <button id="play" aria-label="Play timeline">▶</button>
+      <input id="slider" type="range" min="0" value="0" aria-label="Timeline route selector" />
+      <button id="reset" aria-label="Reset filters">ALL</button>
+      <div class="year" id="year">1300s–1500s</div>
+    </div>
+  </section>
+
+  <script>
+    'use strict';
+
+    const isMobile = window.matchMedia('(max-width: 760px)').matches;
+
+    const places = {
+      /* Imperial centers */
+      istanbul: ['Istanbul', [41.01, 28.97], 'origin', 'Ottoman imperial center linking Southeast Europe, the Middle East, and North Africa.'],
+      lisbon: ['Lisbon', [38.72, -9.14], 'origin', 'Portuguese maritime empire and one of the earliest global colonial powers.'],
+      madrid: ['Madrid', [40.42, -3.70], 'origin', 'Spanish imperial center after 1492 and a major colonial metropole.'],
+      amsterdam: ['Amsterdam', [52.37, 4.90], 'origin', 'Dutch commercial and maritime imperial center.'],
+      london: ['London', [51.51, -0.13], 'origin', 'British imperial capital of the largest empire in modern history.'],
+      paris: ['Paris', [48.86, 2.35], 'origin', 'French imperial center shaping rule across Africa, Asia, and the Caribbean.'],
+      stpetersburg: ['St. Petersburg', [59.93, 30.33], 'origin', 'Russian imperial center for expansion across Eurasia.'],
+      washington: ['Washington, D.C.', [38.90, -77.04], 'origin', 'U.S. political center during overseas and territorial expansion.'],
+      brussels: ['Brussels', [50.85, 4.35], 'origin', 'Belgian imperial center, especially linked to Central Africa.'],
+      berlin: ['Berlin', [52.52, 13.40], 'origin', 'German imperial center during late-19th-century colonial expansion.'],
+      tokyo: ['Tokyo', [35.68, 139.76], 'origin', 'Japanese imperial center in East Asia and the Pacific.'],
+      rome: ['Rome', [41.90, 12.50], 'origin', 'Italian imperial center tied mainly to African expansion.'],
+
+      /* Ottoman regions */
+      sarajevo: ['Sarajevo', [43.86, 18.41], 'market', 'Proxy for Ottoman rule in the Balkans.'],
+      cairo: ['Cairo', [30.04, 31.24], 'market', 'Proxy for Ottoman power in Arab and North African regions.'],
+      baghdad: ['Baghdad', [33.31, 44.36], 'market', 'Proxy for Ottoman rule in Arab provinces.'],
+      algiers: ['Algiers', [36.75, 3.04], 'market', 'Proxy for Ottoman influence in North Africa; later colonized by France.'],
+
+      /* Portuguese regions */
+      praia: ['Praia', [14.92, -23.51], 'market', 'Cape Verde within Portuguese Atlantic empire and slave-trade systems.'],
+      salvador: ['Salvador', [-12.97, -38.50], 'market', 'Proxy for Portuguese Brazil and plantation colonialism.'],
+      luanda: ['Luanda', [-8.84, 13.23], 'market', 'Portuguese Angola and Atlantic slave-trade networks.'],
+      maputo: ['Maputo', [-25.97, 32.58], 'market', 'Portuguese Mozambique and Indian Ocean colonial routes.'],
+      goa: ['Goa', [15.49, 73.82], 'market', 'Portuguese enclave in India.'],
+      macau: ['Macau', [22.20, 113.54], 'market', 'Portuguese colonial trading post in China.'],
+      dili: ['Dili', [-8.56, 125.57], 'market', 'Portuguese East Timor in Southeast Asia.'],
+
+      /* Spanish regions */
+      mexicoCity: ['Mexico City', [19.43, -99.13], 'market', 'Center of New Spain and Spanish colonial administration in Mesoamerica.'],
+      lima: ['Lima', [-12.05, -77.04], 'market', 'Center of Spanish rule in Peru and the Andes.'],
+      bogota: ['Bogotá', [4.71, -74.07], 'market', 'Proxy for Spanish colonial New Granada.'],
+      buenosAires: ['Buenos Aires', [-34.60, -58.38], 'market', 'Proxy for the southern Spanish empire in Latin America.'],
+      havana: ['Havana', [23.11, -82.37], 'market', 'Proxy for Spanish Caribbean territories.'],
+      manila: ['Manila', [14.60, 120.98], 'market', 'Spanish then U.S. colonial center in the Philippines.'],
+
+      /* Dutch regions */
+      jakarta: ['Jakarta', [-6.20, 106.82], 'market', 'Proxy for the Dutch East Indies / Indonesia.'],
+      paramaribo: ['Paramaribo', [5.85, -55.17], 'market', 'Dutch Suriname and plantation colonial economy.'],
+      capeTown: ['Cape Town', [-33.92, 18.42], 'market', 'Early Dutch Cape Colony; later British imperial zone.'],
+
+      /* British regions */
+      delhi: ['Delhi', [28.61, 77.21], 'market', 'Proxy for British India and later the South Asian colonial sphere.'],
+      kingston: ['Kingston', [17.98, -76.79], 'market', 'Proxy for British Caribbean plantation and slave-trade systems.'],
+      ottawa: ['Ottawa', [45.42, -75.69], 'market', 'Proxy for British Canada and settler colonialism.'],
+      sydney: ['Sydney', [-33.87, 151.21], 'market', 'Proxy for British Australia and settler colonialism.'],
+      lagos: ['Lagos', [6.52, 3.38], 'market', 'Proxy for British colonial rule in Nigeria.'],
+      nairobi: ['Nairobi', [-1.29, 36.82], 'market', 'Proxy for British colonial Kenya and settler rule.'],
+
+      /* French regions */
+      dakar: ['Dakar', [14.69, -17.45], 'market', 'Proxy for French West Africa and Senegal.'],
+      portAuPrince: ['Port-au-Prince', [18.54, -72.34], 'market', 'Proxy for Saint-Domingue / Haiti under French plantation colonialism.'],
+      antananarivo: ['Antananarivo', [-18.88, 47.51], 'market', 'Proxy for French Madagascar.'],
+      hanoi: ['Hanoi', [21.03, 105.85], 'market', 'Proxy for French Indochina / Vietnam.'],
+      phnomPenh: ['Phnom Penh', [11.56, 104.93], 'market', 'Proxy for French Cambodia.'],
+      vientiane: ['Vientiane', [17.97, 102.61], 'market', 'Proxy for French Laos.'],
+
+      /* Russian regions */
+      novosibirsk: ['Novosibirsk', [55.01, 82.94], 'market', 'Proxy for Russian expansion across Siberia.'],
+      almaty: ['Almaty', [43.24, 76.89], 'market', 'Proxy for Russian / imperial control in Central Asia.'],
+      tbilisi: ['Tbilisi', [41.72, 44.79], 'market', 'Proxy for Russian imperial rule in the Caucasus.'],
+      riga: ['Riga', [56.95, 24.11], 'market', 'Proxy for Russian domination of Baltic territories.'],
+
+      /* U.S. territories */
+      honolulu: ['Honolulu', [21.31, -157.86], 'market', 'Proxy for U.S. annexation of Hawaii.'],
+      sanJuan: ['San Juan', [18.47, -66.10], 'market', 'Proxy for Puerto Rico under U.S. control.'],
+      hagatna: ['Hagåtña', [13.47, 144.75], 'market', 'Proxy for Guam under U.S. rule.'],
+
+      /* Belgian regions */
+      kinshasa: ['Kinshasa', [-4.32, 15.31], 'market', 'Proxy for Belgian colonial rule in the Congo.'],
+      kigali: ['Kigali', [-1.95, 30.06], 'market', 'Proxy for Belgian colonial administration in Rwanda.'],
+      bujumbura: ['Bujumbura', [-3.38, 29.36], 'market', 'Proxy for Belgian colonial administration in Burundi.'],
+
+      /* German regions */
+      windhoek: ['Windhoek', [-22.57, 17.08], 'market', 'Proxy for German South West Africa / Namibia.'],
+      dar: ['Dar es Salaam', [-6.79, 39.21], 'market', 'Proxy for German East Africa / Tanzania.'],
+      douala: ['Douala', [4.05, 9.70], 'market', 'Proxy for German Cameroon.'],
+      lome: ['Lomé', [6.13, 1.22], 'market', 'Proxy for German Togoland / Togo.'],
+
+      /* Japanese regions */
+      seoul: ['Seoul', [37.57, 126.98], 'market', 'Proxy for Japanese colonial rule in Korea.'],
+      taipei: ['Taipei', [25.03, 121.56], 'market', 'Proxy for Japanese colonial rule in Taiwan.'],
+      shenyang: ['Shenyang', [41.80, 123.43], 'market', 'Proxy for Japanese occupation in parts of China / Manchuria.'],
+      saipan: ['Saipan', [15.18, 145.75], 'market', 'Proxy for Japanese rule in Pacific islands.'],
+
+      /* Italian regions */
+      tripoli: ['Tripoli', [32.89, 13.19], 'market', 'Proxy for Italian colonial Libya.'],
+      asmara: ['Asmara', [15.32, 38.93], 'market', 'Proxy for Italian Eritrea.'],
+      mogadishu: ['Mogadishu', [2.05, 45.32], 'market', 'Proxy for Italian Somalia.'],
+      addisAbaba: ['Addis Ababa', [8.98, 38.79], 'market', 'Proxy for Italy’s brief occupation of Ethiopia.']
+    };
+
+    const rawRoutes = [
+      /* Ottoman Empire */
+      {
+        period: '1300s–1500s',
+        genre: 'Ottoman expansion into the Balkans',
+        fromName: 'Istanbul',
+        toName: 'Sarajevo',
+        description: 'The Ottoman Empire expanded across Southeast Europe through conquest, administration, taxation, and military control.',
+        from: 'istanbul',
+        to: 'sarajevo',
+        type: 'land empire · military conquest',
+        legacy: 'Imperial incorporation, religious pluralism under hierarchy, taxation, and long-term regional restructuring.',
+        camera: [43, 22, 5]
+      },
+      {
+        period: '1500s',
+        genre: 'Ottoman rule in Arab regions',
+        fromName: 'Istanbul',
+        toName: 'Cairo',
+        description: 'Ottoman power extended over Arab regions and North Africa through provincial rule and imperial administration.',
+        from: 'istanbul',
+        to: 'cairo',
+        type: 'land empire · provincial rule',
+        legacy: 'Administrative integration, military governance, taxation, and imperial restructuring.',
+        camera: [35, 30, 4]
+      },
+      {
+        period: '1500s',
+        genre: 'Ottoman rule in Mesopotamia',
+        fromName: 'Istanbul',
+        toName: 'Baghdad',
+        description: 'Ottoman power spread into key Arab territories, linking them to the imperial center.',
+        from: 'istanbul',
+        to: 'baghdad',
+        type: 'land empire · military-administrative rule',
+        legacy: 'Imperial governance, strategic control, and long-term regional dependencies.',
+        camera: [38, 37, 4]
+      },
+      {
+        period: '1500s',
+        genre: 'Ottoman influence in North Africa',
+        fromName: 'Istanbul',
+        toName: 'Algiers',
+        description: 'Ottoman influence reached into North Africa, integrating port cities and provinces into wider imperial structures.',
+        from: 'istanbul',
+        to: 'algiers',
+        type: 'imperial control · strategic coastal rule',
+        legacy: 'Regional incorporation, military defense, taxation, and shifting Mediterranean power.',
+        camera: [37, 15, 4]
+      },
+
+      /* Portugal */
+      {
+        period: '1400s–1500s',
+        genre: 'Portuguese Atlantic expansion',
+        fromName: 'Lisbon',
+        toName: 'Cape Verde',
+        description: 'Portugal built one of the earliest global colonial empires through maritime expansion, Atlantic islands, and trade networks.',
+        from: 'lisbon',
+        to: 'praia',
+        type: 'maritime empire · trade + slave-trade system',
+        legacy: 'Forced labor, Atlantic slavery, and long-distance extractive networks.',
+        camera: [24, -20, 4]
+      },
+      {
+        period: '1500s',
+        genre: 'Portuguese Brazil',
+        fromName: 'Lisbon',
+        toName: 'Salvador',
+        description: 'Brazil became a central Portuguese colony marked by plantation systems, resource extraction, and slavery.',
+        from: 'lisbon',
+        to: 'salvador',
+        type: 'settler + plantation colonialism',
+        legacy: 'Enslavement, sugar economies, racial hierarchy, and massive wealth extraction.',
+        camera: [5, -24, 3]
+      },
+      {
+        period: '1500s–1800s',
+        genre: 'Portuguese Angola',
+        fromName: 'Lisbon',
+        toName: 'Luanda',
+        description: 'Portugal established colonial rule in Angola while deeply embedding the territory in Atlantic slaving systems.',
+        from: 'lisbon',
+        to: 'luanda',
+        type: 'extractive colonialism · slave-trade system',
+        legacy: 'Forced labor, violence, population dislocation, and resource extraction.',
+        camera: [12, 2, 4]
+      },
+      {
+        period: '1500s–1900s',
+        genre: 'Portuguese Mozambique',
+        fromName: 'Lisbon',
+        toName: 'Maputo',
+        description: 'Portuguese rule extended across parts of southeastern Africa through trading posts, occupation, and labor extraction.',
+        from: 'lisbon',
+        to: 'maputo',
+        type: 'maritime-to-territorial colonialism',
+        legacy: 'Forced labor, extraction, commercial control, and colonial borders.',
+        camera: [0, 15, 3]
+      },
+      {
+        period: '1500s',
+        genre: 'Portuguese Goa',
+        fromName: 'Lisbon',
+        toName: 'Goa',
+        description: 'Portugal maintained enclaves in India as part of a wider Indian Ocean imperial network.',
+        from: 'lisbon',
+        to: 'goa',
+        type: 'trading empire · enclave colonialism',
+        legacy: 'Religious influence, commercial control, and coastal imperial rule.',
+        camera: [25, 35, 3]
+      },
+      {
+        period: '1500s',
+        genre: 'Portuguese Macau',
+        fromName: 'Lisbon',
+        toName: 'Macau',
+        description: 'Macau served as a Portuguese colonial and trading outpost in China.',
+        from: 'lisbon',
+        to: 'macau',
+        type: 'trading empire · port enclave',
+        legacy: 'Commercial mediation, imperial contact zones, and strategic maritime control.',
+        camera: [32, 55, 2]
+      },
+      {
+        period: '1700s–1900s',
+        genre: 'Portuguese East Timor',
+        fromName: 'Lisbon',
+        toName: 'Dili',
+        description: 'Portugal ruled East Timor as part of its lingering Southeast Asian colonial possessions.',
+        from: 'lisbon',
+        to: 'dili',
+        type: 'overseas territorial rule',
+        legacy: 'Peripheral extraction, cultural control, and delayed decolonization.',
+        camera: [10, 75, 2]
+      },
+
+      /* Spain */
+      {
+        period: '1500s',
+        genre: 'Spanish conquest of Mexico',
+        fromName: 'Madrid',
+        toName: 'Mexico City',
+        description: 'Spain built one of the largest empires after 1492, establishing colonial administration over Mesoamerica.',
+        from: 'madrid',
+        to: 'mexicoCity',
+        type: 'conquest empire · settler + extractive rule',
+        legacy: 'Forced labor, imposed religion, caste systems, and silver extraction.',
+        camera: [24, -45, 3]
+      },
+      {
+        period: '1500s',
+        genre: 'Spanish Peru and the Andes',
+        fromName: 'Madrid',
+        toName: 'Lima',
+        description: 'Spanish rule expanded into the Andes, building colonial hierarchies around mining, religion, and labor coercion.',
+        from: 'madrid',
+        to: 'lima',
+        type: 'extractive colonialism',
+        legacy: 'Mining extraction, Indigenous dispossession, and imperial administration.',
+        camera: [8, -38, 3]
+      },
+      {
+        period: '1500s',
+        genre: 'Spanish New Granada',
+        fromName: 'Madrid',
+        toName: 'Bogotá',
+        description: 'Spain extended rule across northern South America as part of its wider American empire.',
+        from: 'madrid',
+        to: 'bogota',
+        type: 'settler-imperial governance',
+        legacy: 'Colonial bureaucracy, cultural suppression, and economic extraction.',
+        camera: [19, -33, 3]
+      },
+      {
+        period: '1500s–1700s',
+        genre: 'Spanish southern South America',
+        fromName: 'Madrid',
+        toName: 'Buenos Aires',
+        description: 'Spain integrated the southern cone into imperial trade and governance systems.',
+        from: 'madrid',
+        to: 'buenosAires',
+        type: 'territorial empire · trade regulation',
+        legacy: 'Colonial social stratification and long-distance extraction.',
+        camera: [-5, -30, 3]
+      },
+      {
+        period: '1500s',
+        genre: 'Spanish Caribbean',
+        fromName: 'Madrid',
+        toName: 'Havana',
+        description: 'Spain’s Caribbean colonies were central to plantation, shipping, and slave-trade systems.',
+        from: 'madrid',
+        to: 'havana',
+        type: 'plantation colonialism',
+        legacy: 'Slavery, sugar economies, racial hierarchy, and military port control.',
+        camera: [28, -35, 4]
+      },
+      {
+        period: '1565–1800s',
+        genre: 'Spanish Philippines',
+        fromName: 'Madrid',
+        toName: 'Manila',
+        description: 'The Philippines became a major Spanish colony connecting Asia and the Americas through trade and imperial rule.',
+        from: 'madrid',
+        to: 'manila',
+        type: 'maritime empire · religious + commercial rule',
+        legacy: 'Catholic conversion, trade integration, and colonial governance.',
+        camera: [25, 65, 2]
+      },
+
+      /* Netherlands */
+      {
+        period: '1600s–1900s',
+        genre: 'Dutch East Indies',
+        fromName: 'Amsterdam',
+        toName: 'Jakarta',
+        description: 'The Netherlands built a major maritime empire centered on trade, monopoly control, and colonial rule in Indonesia.',
+        from: 'amsterdam',
+        to: 'jakarta',
+        type: 'trading empire · extractive monopoly',
+        legacy: 'Resource extraction, labor coercion, and colonial commercial control.',
+        camera: [20, 55, 2]
+      },
+      {
+        period: '1600s–1800s',
+        genre: 'Dutch Suriname',
+        fromName: 'Amsterdam',
+        toName: 'Paramaribo',
+        description: 'Dutch colonial rule in Suriname revolved around plantation economies and enslaved labor.',
+        from: 'amsterdam',
+        to: 'paramaribo',
+        type: 'plantation colonialism',
+        legacy: 'Slavery, export agriculture, and racialized labor systems.',
+        camera: [25, -25, 3]
+      },
+      {
+        period: '1600s',
+        genre: 'Dutch Cape Colony',
+        fromName: 'Amsterdam',
+        toName: 'Cape Town',
+        description: 'The Dutch established an early settler colony at the Cape, later absorbed into British imperial structures.',
+        from: 'amsterdam',
+        to: 'capeTown',
+        type: 'settler colonialism',
+        legacy: 'Land seizure, settlement, and long-term racial dispossession.',
+        camera: [5, 8, 3]
+      },
+
+      /* Britain */
+      {
+        period: '1600s–1900s',
+        genre: 'British India',
+        fromName: 'London',
+        toName: 'Delhi',
+        description: 'The British Empire became the largest modern empire, with India as one of its central colonies.',
+        from: 'london',
+        to: 'delhi',
+        type: 'company rule → crown rule',
+        legacy: 'Extraction, famine, rail/administrative infrastructure for empire, and anti-colonial resistance.',
+        camera: [28, 30, 3]
+      },
+      {
+        period: '1600s–1800s',
+        genre: 'British Caribbean',
+        fromName: 'London',
+        toName: 'Kingston',
+        description: 'British Caribbean colonialism depended heavily on plantation slavery and Atlantic commerce.',
+        from: 'london',
+        to: 'kingston',
+        type: 'plantation colonialism',
+        legacy: 'Slavery, export monocultures, and racial domination.',
+        camera: [30, -40, 3]
+      },
+      {
+        period: '1700s–1800s',
+        genre: 'British Canada',
+        fromName: 'London',
+        toName: 'Ottawa',
+        description: 'British rule in Canada developed through conquest, settlement, and territorial expansion.',
+        from: 'london',
+        to: 'ottawa',
+        type: 'settler colonialism',
+        legacy: 'Indigenous dispossession, settlement, and territorial control.',
+        camera: [52, -35, 3]
+      },
+      {
+        period: '1788–1900s',
+        genre: 'British Australia',
+        fromName: 'London',
+        toName: 'Sydney',
+        description: 'Australia became a major British settler colony built on territorial occupation and displacement.',
+        from: 'london',
+        to: 'sydney',
+        type: 'settler colonialism',
+        legacy: 'Land seizure, Aboriginal dispossession, and empire-building through settlement.',
+        camera: [10, 80, 2]
+      },
+      {
+        period: '1800s–1900s',
+        genre: 'British South Africa',
+        fromName: 'London',
+        toName: 'Cape Town',
+        description: 'British control over South Africa linked settler rule to mineral extraction and imperial strategy.',
+        from: 'london',
+        to: 'capeTown',
+        type: 'settler + extractive colonialism',
+        legacy: 'Racial domination, labor exploitation, and imperial restructuring.',
+        camera: [8, 5, 3]
+      },
+      {
+        period: '1800s–1900s',
+        genre: 'British Nigeria',
+        fromName: 'London',
+        toName: 'Lagos',
+        description: 'British colonial rule in Nigeria combined trade, indirect rule, and extractive administration.',
+        from: 'london',
+        to: 'lagos',
+        type: 'protectorate · indirect rule',
+        legacy: 'Artificial borders, extraction, and administrative restructuring.',
+        camera: [22, -2, 4]
+      },
+      {
+        period: '1800s–1900s',
+        genre: 'British Kenya',
+        fromName: 'London',
+        toName: 'Nairobi',
+        description: 'British colonial rule in Kenya included settler influence, land alienation, and imperial administration.',
+        from: 'london',
+        to: 'nairobi',
+        type: 'settler + protectorate rule',
+        legacy: 'Land theft, coercive labor, and anti-colonial resistance.',
+        camera: [15, 15, 3]
+      },
+
+      /* France */
+      {
+        period: '1600s–1700s',
+        genre: 'French Saint-Domingue / Haiti',
+        fromName: 'Paris',
+        toName: 'Port-au-Prince',
+        description: 'French plantation colonialism in Saint-Domingue generated immense wealth through slavery before the Haitian Revolution.',
+        from: 'paris',
+        to: 'portAuPrince',
+        type: 'plantation colonialism',
+        legacy: 'Enslavement, brutal extraction, and revolutionary anti-colonial resistance.',
+        camera: [30, -35, 3]
+      },
+      {
+        period: '1600s–1900s',
+        genre: 'French Senegal / West Africa',
+        fromName: 'Paris',
+        toName: 'Dakar',
+        description: 'France built a major colonial presence in West Africa through military, administrative, and commercial domination.',
+        from: 'paris',
+        to: 'dakar',
+        type: 'imperial expansion · assimilation/association',
+        legacy: 'Extraction, administrative control, and lasting Francophone structures.',
+        camera: [28, -6, 4]
+      },
+      {
+        period: '1830–1900s',
+        genre: 'French Algeria',
+        fromName: 'Paris',
+        toName: 'Algiers',
+        description: 'Algeria became one of France’s most important and violent colonial possessions, marked by settlement and repression.',
+        from: 'paris',
+        to: 'algiers',
+        type: 'settler colonialism',
+        legacy: 'Land seizure, military violence, cultural suppression, and resistance.',
+        camera: [41, 0, 5]
+      },
+      {
+        period: '1800s–1900s',
+        genre: 'French Madagascar',
+        fromName: 'Paris',
+        toName: 'Antananarivo',
+        description: 'France incorporated Madagascar into its imperial system through conquest and colonial administration.',
+        from: 'paris',
+        to: 'antananarivo',
+        type: 'territorial colonialism',
+        legacy: 'Forced labor, extraction, and political subordination.',
+        camera: [6, 22, 3]
+      },
+      {
+        period: '1800s–1900s',
+        genre: 'French Vietnam',
+        fromName: 'Paris',
+        toName: 'Hanoi',
+        description: 'Vietnam was integrated into French Indochina as part of a wider colonial complex in Southeast Asia.',
+        from: 'paris',
+        to: 'hanoi',
+        type: 'colonial federation · extractive rule',
+        legacy: 'Resource extraction, cultural domination, and anti-colonial struggle.',
+        camera: [28, 52, 2]
+      },
+      {
+        period: '1800s–1900s',
+        genre: 'French Cambodia',
+        fromName: 'Paris',
+        toName: 'Phnom Penh',
+        description: 'Cambodia became part of French Indochina under colonial administration and imperial hierarchy.',
+        from: 'paris',
+        to: 'phnomPenh',
+        type: 'protectorate within colonial federation',
+        legacy: 'Political subordination, administrative restructuring, and resource extraction.',
+        camera: [24, 50, 2]
+      },
+      {
+        period: '1800s–1900s',
+        genre: 'French Laos',
+        fromName: 'Paris',
+        toName: 'Vientiane',
+        description: 'Laos was governed within French Indochina as part of France’s Asian colonial system.',
+        from: 'paris',
+        to: 'vientiane',
+        type: 'protectorate within colonial federation',
+        legacy: 'Administrative rule, extraction, and imperial border-making.',
+        camera: [24, 48, 2]
+      },
+
+      /* Russia */
+      {
+        period: '1600s–1800s',
+        genre: 'Russian Siberian expansion',
+        fromName: 'St. Petersburg',
+        toName: 'Novosibirsk',
+        description: 'Russia expanded across Eurasia through conquest, settlement, and the incorporation of vast territories.',
+        from: 'stpetersburg',
+        to: 'novosibirsk',
+        type: 'territorial conquest + settlement',
+        legacy: 'Settlement, Indigenous dispossession, and imperial incorporation.',
+        camera: [60, 65, 3]
+      },
+      {
+        period: '1700s–1800s',
+        genre: 'Russian Central Asia',
+        fromName: 'St. Petersburg',
+        toName: 'Almaty',
+        description: 'Russian imperial rule spread into Central Asia through military conquest and administrative domination.',
+        from: 'stpetersburg',
+        to: 'almaty',
+        type: 'territorial empire',
+        legacy: 'Imperial restructuring, settlement, and cultural domination.',
+        camera: [52, 55, 3]
+      },
+      {
+        period: '1800s',
+        genre: 'Russian Caucasus',
+        fromName: 'St. Petersburg',
+        toName: 'Tbilisi',
+        description: 'The Russian Empire imposed control over Caucasus regions through conquest and integration.',
+        from: 'stpetersburg',
+        to: 'tbilisi',
+        type: 'military conquest',
+        legacy: 'Imperial administration, resistance, and border-making.',
+        camera: [50, 38, 4]
+      },
+      {
+        period: '1700s–1900s',
+        genre: 'Russian Baltic domination',
+        fromName: 'St. Petersburg',
+        toName: 'Riga',
+        description: 'Russia dominated Baltic territories as part of westward imperial expansion.',
+        from: 'stpetersburg',
+        to: 'riga',
+        type: 'territorial empire',
+        legacy: 'Political domination and integration into imperial systems.',
+        camera: [58, 28, 5]
+      },
+
+      /* United States */
+      {
+        period: '1898–1900s',
+        genre: 'U.S. Hawaii',
+        fromName: 'Washington, D.C.',
+        toName: 'Honolulu',
+        description: 'The United States expanded territorially and overseas, incorporating Hawaii into an American imperial sphere.',
+        from: 'washington',
+        to: 'honolulu',
+        type: 'annexation · settler-imperial expansion',
+        legacy: 'Loss of sovereignty, military strategic control, and settler domination.',
+        camera: [28, -120, 2]
+      },
+      {
+        period: '1898–1940s',
+        genre: 'U.S. Philippines',
+        fromName: 'Washington, D.C.',
+        toName: 'Manila',
+        description: 'After 1898, the Philippines became a major U.S. colonial possession in the Pacific.',
+        from: 'washington',
+        to: 'manila',
+        type: 'overseas colonial rule',
+        legacy: 'Military occupation, anti-colonial war, and political dependency.',
+        camera: [22, 120, 2]
+      },
+      {
+        period: '1898–present',
+        genre: 'U.S. Puerto Rico',
+        fromName: 'Washington, D.C.',
+        toName: 'San Juan',
+        description: 'Puerto Rico became a U.S. territory following the Spanish-American War.',
+        from: 'washington',
+        to: 'sanJuan',
+        type: 'territorial control',
+        legacy: 'Limited sovereignty, dependency, and long-term political ambiguity.',
+        camera: [27, -70, 4]
+      },
+      {
+        period: '1898–present',
+        genre: 'U.S. Guam',
+        fromName: 'Washington, D.C.',
+        toName: 'Hagåtña',
+        description: 'Guam became part of the expanding U.S. Pacific empire.',
+        from: 'washington',
+        to: 'hagatna',
+        type: 'strategic territorial possession',
+        legacy: 'Military strategic value and limited self-rule.',
+        camera: [20, 150, 2]
+      },
+
+      /* Belgium */
+      {
+        period: '1885–1900s',
+        genre: 'Belgian Congo',
+        fromName: 'Brussels',
+        toName: 'Kinshasa',
+        description: 'Belgium is best known for its brutal colonial rule in Central Africa, especially the Congo.',
+        from: 'brussels',
+        to: 'kinshasa',
+        type: 'extractive colonialism',
+        legacy: 'Extreme violence, forced labor, rubber extraction, and demographic devastation.',
+        camera: [10, 10, 3]
+      },
+      {
+        period: '1900s',
+        genre: 'Belgian Rwanda',
+        fromName: 'Brussels',
+        toName: 'Kigali',
+        description: 'Belgian colonial rule shaped Rwanda through indirect rule and rigid social categorization.',
+        from: 'brussels',
+        to: 'kigali',
+        type: 'mandate/colonial administration',
+        legacy: 'Administrative domination, ethnic codification, and colonial hierarchy.',
+        camera: [20, 15, 3]
+      },
+      {
+        period: '1900s',
+        genre: 'Belgian Burundi',
+        fromName: 'Brussels',
+        toName: 'Bujumbura',
+        description: 'Belgium administered Burundi through colonial governance structures tied to Central African rule.',
+        from: 'brussels',
+        to: 'bujumbura',
+        type: 'mandate/colonial administration',
+        legacy: 'Indirect rule, hierarchy, and colonial restructuring.',
+        camera: [18, 15, 3]
+      },
+
+      /* Germany */
+      {
+        period: '1880s–1910s',
+        genre: 'German Namibia',
+        fromName: 'Berlin',
+        toName: 'Windhoek',
+        description: 'Germany entered colonial competition later, establishing colonies in Africa during the late 19th century.',
+        from: 'berlin',
+        to: 'windhoek',
+        type: 'settler + military colonialism',
+        legacy: 'Violence, land seizure, and the genocide of Herero and Nama peoples.',
+        camera: [8, 12, 3]
+      },
+      {
+        period: '1880s–1910s',
+        genre: 'German East Africa',
+        fromName: 'Berlin',
+        toName: 'Dar es Salaam',
+        description: 'German rule in East Africa combined military coercion with extractive administration.',
+        from: 'berlin',
+        to: 'dar',
+        type: 'territorial colonialism',
+        legacy: 'Forced labor, rebellion, and imperial extraction.',
+        camera: [20, 20, 3]
+      },
+      {
+        period: '1880s–1910s',
+        genre: 'German Cameroon',
+        fromName: 'Berlin',
+        toName: 'Douala',
+        description: 'Germany built colonial rule in Cameroon through trade, occupation, and administration.',
+        from: 'berlin',
+        to: 'douala',
+        type: 'extractive colonialism',
+        legacy: 'Resource extraction and imposed colonial structures.',
+        camera: [18, 8, 4]
+      },
+      {
+        period: '1880s–1910s',
+        genre: 'German Togoland',
+        fromName: 'Berlin',
+        toName: 'Lomé',
+        description: 'Togo was part of the late German colonial empire in West Africa.',
+        from: 'berlin',
+        to: 'lome',
+        type: 'territorial colonial rule',
+        legacy: 'Extractive administration and colonial border-making.',
+        camera: [22, 5, 4]
+      },
+
+      /* Japan */
+      {
+        period: '1895–1945',
+        genre: 'Japanese Taiwan',
+        fromName: 'Tokyo',
+        toName: 'Taipei',
+        description: 'Japan built a colonial empire in East Asia and the Pacific, beginning with major acquisitions such as Taiwan.',
+        from: 'tokyo',
+        to: 'taipei',
+        type: 'imperial annexation',
+        legacy: 'Assimilation pressure, infrastructure for imperial ends, and political domination.',
+        camera: [30, 128, 5]
+      },
+      {
+        period: '1910–1945',
+        genre: 'Japanese Korea',
+        fromName: 'Tokyo',
+        toName: 'Seoul',
+        description: 'Korea was formally annexed and ruled by Japan through colonial governance and cultural suppression.',
+        from: 'tokyo',
+        to: 'seoul',
+        type: 'annexation · direct colonial rule',
+        legacy: 'Cultural suppression, labor exploitation, and anti-colonial resistance.',
+        camera: [36, 132, 5]
+      },
+      {
+        period: '1930s–1945',
+        genre: 'Japanese occupation in parts of China',
+        fromName: 'Tokyo',
+        toName: 'Shenyang',
+        description: 'Japan extended imperial control into parts of China and Manchuria through occupation and military expansion.',
+        from: 'tokyo',
+        to: 'shenyang',
+        type: 'military occupation',
+        legacy: 'Wartime violence, occupation, and forced control.',
+        camera: [39, 128, 4]
+      },
+      {
+        period: '1910s–1945',
+        genre: 'Japanese Pacific islands',
+        fromName: 'Tokyo',
+        toName: 'Saipan',
+        description: 'Japan controlled Pacific islands as part of its broader imperial reach.',
+        from: 'tokyo',
+        to: 'saipan',
+        type: 'overseas island empire',
+        legacy: 'Military outposts, strategic colonial control, and wartime transformation.',
+        camera: [22, 142, 4]
+      },
+
+      /* Italy */
+      {
+        period: '1880s–1940s',
+        genre: 'Italian Eritrea',
+        fromName: 'Rome',
+        toName: 'Asmara',
+        description: 'Italy’s colonial expansion focused mainly on Africa, including Eritrea as an early possession.',
+        from: 'rome',
+        to: 'asmara',
+        type: 'territorial colonialism',
+        legacy: 'Military occupation, extraction, and imposed administration.',
+        camera: [22, 25, 4]
+      },
+      {
+        period: '1900s–1940s',
+        genre: 'Italian Somalia',
+        fromName: 'Rome',
+        toName: 'Mogadishu',
+        description: 'Italy consolidated colonial rule in Somalia as part of its East African imperial project.',
+        from: 'rome',
+        to: 'mogadishu',
+        type: 'territorial rule',
+        legacy: 'Colonial administration and extractive governance.',
+        camera: [18, 30, 3]
+      },
+      {
+        period: '1911–1940s',
+        genre: 'Italian Libya',
+        fromName: 'Rome',
+        toName: 'Tripoli',
+        description: 'Italy colonized Libya through invasion, occupation, and long campaigns of repression.',
+        from: 'rome',
+        to: 'tripoli',
+        type: 'settler + military colonialism',
+        legacy: 'Violence, displacement, and imperial territorial control.',
+        camera: [35, 16, 4]
+      },
+      {
+        period: '1930s',
+        genre: 'Italian occupation of Ethiopia',
+        fromName: 'Rome',
+        toName: 'Addis Ababa',
+        description: 'Italy briefly occupied Ethiopia in an attempt to consolidate a larger East African empire.',
+        from: 'rome',
+        to: 'addisAbaba',
+        type: 'military occupation',
+        legacy: 'Imperial violence and anti-colonial resistance.',
+        camera: [18, 26, 4]
+      }
+    ];
+
+    function isValidPlace(key) {
+      return Boolean(places[key] && Array.isArray(places[key][1]) && places[key][1].length === 2);
+    }
+
+    function isValidRoute(route) {
+      return route && typeof route === 'object' &&
+        typeof route.period === 'string' &&
+        typeof route.genre === 'string' &&
+        typeof route.from === 'string' &&
+        typeof route.to === 'string' &&
+        isValidPlace(route.from) &&
+        isValidPlace(route.to) &&
+        Array.isArray(route.camera) &&
+        route.camera.length === 3;
+    }
+
+    const routes = rawRoutes.filter(isValidRoute);
+
+    function runDataTests() {
+      console.group('Colonial map data tests');
+      console.assert(routes.length > 0, 'Expected at least one valid route');
+      console.assert(routes.length === rawRoutes.length, 'Some raw routes were invalid and filtered out', { raw: rawRoutes.length, valid: routes.length });
+      routes.forEach((route, i) => {
+        console.assert(isValidRoute(route), `Route ${i} should be valid`, route);
+        console.assert(isValidPlace(route.from), `Route ${i} missing from-place: ${route.from}`);
+        console.assert(isValidPlace(route.to), `Route ${i} missing to-place: ${route.to}`);
+      });
+      console.assert(Object.keys(places).length >= 10, 'Expected multiple markers');
+      console.groupEnd();
+    }
+
+    runDataTests();
+
+    const map = L.map('map', {
+      zoomControl: false,
+      worldCopyJump: true,
+      attributionControl: false,
+      tap: true,
+      dragging: true
+    }).setView(isMobile ? [20, 10] : [26, 12], isMobile ? 2 : 3);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(map);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 19,
+      pane: 'shadowPane'
+    }).addTo(map);
+
+    const markers = {};
+    const labels = [];
+    const filterLines = [];
+    let hoverLabel = null;
+    let selectedCity = null;
+    let mainLine = null;
+    let glowLine = null;
+    let flowTag = null;
+    let index = 0;
+    let timer = null;
+    let isPlaying = false;
+
+    const story = document.getElementById('story');
+    const slider = document.getElementById('slider');
+    const year = document.getElementById('year');
+    const play = document.getElementById('play');
+    const reset = document.getElementById('reset');
+
+    slider.max = String(Math.max(0, routes.length - 1));
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function clampRouteIndex(value) {
+      const n = Number.parseInt(value, 10);
+      if (!Number.isFinite(n)) return 0;
+      return Math.min(Math.max(n, 0), routes.length - 1);
+    }
+
+    function getNodeElement(key) {
+      const marker = markers[key];
+      if (!marker) return null;
+      const el = marker.getElement();
+      return el ? el.querySelector('.node') : null;
+    }
+
+    function connectedRoutes(key) {
+      return routes
+        .map((route, i) => ({ route, i }))
+        .filter(({ route }) => route && (route.from === key || route.to === key));
+    }
+
+    function clearHover() {
+      if (hoverLabel) {
+        map.removeLayer(hoverLabel);
+        hoverLabel = null;
+      }
+    }
+
+    function showHover(key) {
+      clearHover();
+      const place = places[key];
+      if (!place) return;
+      const [name, coords, , note] = place;
+      const count = connectedRoutes(key).length;
+      hoverLabel = L.marker(coords, {
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="hover-preview"><strong>${escapeHtml(name)}</strong><span>${count} connected flow${count === 1 ? '' : 's'}</span><span>${escapeHtml(note)}</span></div>`,
+          iconSize: [235, 92],
+          iconAnchor: [117, 104]
+        }),
+        interactive: false
+      }).addTo(map);
+    }
+
+    function arc(a, b) {
+      const points = [];
+      const steps = 90;
+      const [lat1, lng1] = a;
+      const [lat2, lng2] = b;
+      let lngDelta = lng2 - lng1;
+      if (Math.abs(lngDelta) > 180) lngDelta = lngDelta > 0 ? lngDelta - 360 : lngDelta + 360;
+      const distance = Math.abs(lngDelta);
+      const height = Math.min(18, Math.max(4, distance / 8));
+
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        let lng = lng1 + lngDelta * t;
+        if (lng > 180) lng -= 360;
+        if (lng < -180) lng += 360;
+        points.push([
+          lat1 + (lat2 - lat1) * t + Math.sin(Math.PI * t) * height * .28,
+          lng
+        ]);
+      }
+
+      return points;
+    }
+
+    function clearFilterLines() {
+      while (filterLines.length) map.removeLayer(filterLines.pop());
+      selectedCity = null;
+      Object.keys(markers).forEach(key => getNodeElement(key)?.classList.remove('selected-node'));
+    }
+
+    function clearMainRoute() {
+      if (mainLine) map.removeLayer(mainLine);
+      if (glowLine) map.removeLayer(glowLine);
+      if (flowTag) map.removeLayer(flowTag);
+      mainLine = null;
+      glowLine = null;
+      flowTag = null;
+    }
+
+    function addRouteLine(route, style = 'main') {
+      if (!isValidRoute(route)) return null;
+      const start = places[route.from][1];
+      const end = places[route.to][1];
+      const path = arc(start, end);
+
+      if (style === 'filter') {
+        const line = L.polyline(path, {
+          color: '#a78bfa',
+          weight: 4,
+          opacity: .82,
+          className: 'flow-filter'
+        }).addTo(map);
+        filterLines.push(line);
+        return line;
+      }
+
+      glowLine = L.polyline(path, {
+        color: '#f43f5e',
+        weight: 18,
+        opacity: .24,
+        className: 'flow-glow'
+      }).addTo(map);
+
+      mainLine = L.polyline(path, {
+        color: '#fb7185',
+        weight: 6,
+        opacity: .98,
+        className: 'flow-main'
+      }).addTo(map);
+
+      const midpoint = path[Math.floor(path.length * .52)];
+      flowTag = L.marker(midpoint, {
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="flow-tag">${escapeHtml(route.genre)}</div>`,
+          iconAnchor: [55, 15]
+        }),
+        interactive: false
+      }).addTo(map);
+
+      return mainLine;
+    }
+
+    function contextChips(route) {
+      return `
+        <div class="audio-box">
+          <span class="audio-link">type: ${escapeHtml(route.type || 'colonial rule')}</span>
+          <span class="audio-link">period: ${escapeHtml(route.period)}</span>
+          <span class="audio-note">Common impacts: ${escapeHtml(route.legacy || 'forced labor, cultural suppression, extraction of resources, artificial borders, and anti-colonial resistance.')}</span>
+        </div>
+      `;
+    }
+
+    function setActive(i, keepFilter = false) {
+      if (!routes.length) {
+        story.innerHTML = '<h2 class="story-title">No valid routes found</h2><p class="description">Check the route data in the script.</p>';
+        return;
+      }
+
+      index = clampRouteIndex(i);
+      const route = routes[index];
+      if (!isValidRoute(route)) return;
+
+      clearMainRoute();
+      if (!keepFilter) clearFilterLines();
+
+      Object.keys(markers).forEach(key => getNodeElement(key)?.classList.remove('active-node'));
+      getNodeElement(route.from)?.classList.add('active-node');
+      getNodeElement(route.to)?.classList.add('active-node');
+
+      addRouteLine(route, 'main');
+
+      story.innerHTML = `
+        <span class="period">${escapeHtml(route.period)}</span>
+        <h2 class="story-title">${escapeHtml(route.genre)}</h2>
+        <p class="route">${escapeHtml(route.fromName)} → ${escapeHtml(route.toName)}</p>
+        <p class="description">${escapeHtml(route.description)}</p>
+        ${contextChips(route)}
+      `;
+
+      year.textContent = route.period;
+      slider.value = String(index);
+      const zoom = isMobile ? Math.max(2, route.camera[2] - 1) : route.camera[2];
+      map.flyTo([route.camera[0], route.camera[1]], zoom, { duration: .85 });
+    }
+
+    function filterCity(key) {
+      if (!places[key]) return;
+      clearFilterLines();
+      selectedCity = key;
+      const [name, coords] = places[key];
+      const related = connectedRoutes(key);
+
+      Object.keys(markers).forEach(markerKey => getNodeElement(markerKey)?.classList.remove('selected-node'));
+      getNodeElement(key)?.classList.add('selected-node');
+
+      related.forEach(({ route }) => addRouteLine(route, 'filter'));
+
+      const list = related.length
+        ? related.map(({ route, i }) => `
+          <div class="filter-route" onclick="window.__setRoute(${i})">
+            <strong>${escapeHtml(route.genre)}</strong><br>${escapeHtml(route.fromName)} → ${escapeHtml(route.toName)} · ${escapeHtml(route.period)}<br>
+            <span style="color:#93c5fd">type: ${escapeHtml(route.type || 'colonial rule')}</span>
+          </div>
+        `).join('')
+        : '<div class="filter-route">No connected routes yet.</div>';
+
+      story.innerHTML = `
+        <span class="period">place filter</span>
+        <h2 class="story-title">${escapeHtml(name)}</h2>
+        <p class="route">${related.length} connected flow${related.length === 1 ? '' : 's'}</p>
+        <p class="description">This filter shows all mapped routes connected to this imperial center or colonized territory.</p>
+        <div class="filter-list">${list}</div>
+      `;
+
+      year.textContent = 'Filter';
+      map.flyTo(coords, isMobile ? 4 : 5, { duration: .8 });
+    }
+
+    Object.entries(places).forEach(([key, [name, coords, kind, note]]) => {
+      const nodeIcon = L.divIcon({
+        className: '',
+        html: `<div class="node ${kind}" data-city="${escapeHtml(key)}"></div>`,
+        iconSize: isMobile ? [22, 22] : [18, 18],
+        iconAnchor: isMobile ? [11, 11] : [9, 9]
+      });
+
+      const labelIcon = L.divIcon({
+        className: '',
+        html: `<div class="city-label">${escapeHtml(name)}</div>`,
+        iconSize: [110, 26],
+        iconAnchor: [55, -12]
+      });
+
+      markers[key] = L.marker(coords, { icon: nodeIcon }).addTo(map);
+      markers[key].bindPopup(`<strong>${escapeHtml(name)}</strong><br>${escapeHtml(note)}`);
+
+      if (!isMobile) {
+        markers[key].on('mouseover', () => showHover(key));
+        markers[key].on('mouseout', clearHover);
+      }
+      markers[key].on('click', () => filterCity(key));
+
+      labels.push(L.marker(coords, { icon: labelIcon, interactive: false }).addTo(map));
+    });
+
+    window.__setRoute = function(i) {
+      setActive(i, true);
+    };
+
+    slider.addEventListener('input', e => setActive(e.target.value));
+
+    play.addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      play.textContent = isPlaying ? 'Ⅱ' : '▶';
+
+      if (isPlaying) {
+        timer = setInterval(() => setActive((index + 1) % routes.length), 5200);
+      } else {
+        clearInterval(timer);
+      }
+    });
+
+    reset.addEventListener('click', () => {
+      clearFilterLines();
+      setActive(index);
+    });
+
+    setActive(0);
+  </script>
+</body>
+</html>

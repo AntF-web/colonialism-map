@@ -1,19 +1,20 @@
-# Colonialism Expansion Flow Map — GitHub Pages
+# Colonialism Expansion Flow Map — Dark GitHub Pages Version
 
-This build uses the standard **OpenStreetMap raster tile server**:
+This is a static GitHub Pages project.
 
-`https://tile.openstreetmap.org/{z}/{x}/{y}.png`
+## Files
 
-It contains **no MapTiler, Mapbox, Carto, Stadia, Thunderforest or other API-key based basemap**.
+- `index.html` — the interactive bilingual EN/FR colonialism timeline map
+- `.nojekyll` — keeps GitHub Pages from processing the project with Jekyll
 
-## Publish
+## Basemap
 
-Upload these three files directly to the root of your GitHub repository:
+This version uses the dark CARTO basemap:
 
-- `index.html`
-- `.nojekyll`
-- `README.md`
+```js
+https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png
+```
 
-Then go to **Settings → Pages → Deploy from a branch → main → /(root)**.
+It does **not** use MapTiler or Mapbox and does **not** require an API key.
 
-If the published page still says **API Key required**, GitHub Pages is serving a different/older file. Open the live page source and search for `maptiler`. If it appears, replace the repository-root `index.html` with the one in this ZIP and redeploy.
+If your live GitHub page still says "API key required", GitHub Pages is probably still serving an older `index.html`. Replace the root `index.html`, commit the change, then hard refresh the browser.

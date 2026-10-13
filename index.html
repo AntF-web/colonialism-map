@@ -286,10 +286,11 @@
 
     const map = L.map('map', { zoomControl: false, worldCopyJump: true, attributionControl: true, tap: true, dragging: true }).setView(isMobile ? [20, 10] : [26, 12], isMobile ? 2 : 3);
 
-    // OpenStreetMap raster tiles: no API key or account required.
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Dark CARTO basemap: no MapTiler/Mapbox API key required.
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(map);
 
     const markers = {}, labels = [], filterLines = [];

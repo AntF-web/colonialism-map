@@ -286,6 +286,8 @@
     const routes = rawRoutes.filter(isValidRoute);
 
     const map = L.map('map', { zoomControl: false, worldCopyJump: true, attributionControl: false, tap: true, dragging: true }).setView(isMobile ? [20, 10] : [26, 12], isMobile ? 2 : 3);
+
+    // API-key-free tile layers. No MapTiler key is required.
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19 }).addTo(map);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19, pane: 'shadowPane' }).addTo(map);
 

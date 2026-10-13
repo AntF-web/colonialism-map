@@ -1,20 +1,13 @@
-# Colonialism Expansion Flow Map — Dark GitHub Pages Version
+# Colonialism Expansion Flow Map
 
-This is a static GitHub Pages project.
+GitHub Pages-ready version.
 
-## Files
+This build uses a dark built-in background and **no external map tile provider**.
+It should not trigger MapTiler, Mapbox, CARTO, or other tile key errors.
 
-- `index.html` — the interactive bilingual EN/FR colonialism timeline map
-- `.nojekyll` — keeps GitHub Pages from processing the project with Jekyll
+## Publish
 
-## Basemap
-
-This version uses the dark CARTO basemap:
-
-```js
-https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png
-```
-
-It does **not** use MapTiler or Mapbox and does **not** require an API key.
-
-If your live GitHub page still says "API key required", GitHub Pages is probably still serving an older `index.html`. Replace the root `index.html`, commit the change, then hard refresh the browser.
+1. Upload `index.html`, `README.md`, and `.nojekyll` to the root of your GitHub repository.
+2. Go to Settings → Pages.
+3. Select `main` and `/root`.
+4. Save and hard-refresh the live page.

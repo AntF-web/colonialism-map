@@ -1,41 +1,19 @@
-# Colonialism Expansion Flow Map
+# Colonialism Expansion Flow Map — GitHub Pages
 
-GitHub Pages-ready interactive Leaflet map with EN/FR language switcher.
+This build uses the standard **OpenStreetMap raster tile server**:
 
-## Important
+`https://tile.openstreetmap.org/{z}/{x}/{y}.png`
 
-This version uses **free Carto raster tiles** and does **not** require a MapTiler API key.
+It contains **no MapTiler, Mapbox, Carto, Stadia, Thunderforest or other API-key based basemap**.
 
-There should be no `MapTiler`, `api.maptiler.com`, or `key=` tile URL in `index.html`.
+## Publish
 
-## Publish on GitHub Pages
+Upload these three files directly to the root of your GitHub repository:
 
-1. Create a new GitHub repository.
-2. Upload all files from this folder:
-   - `index.html`
-   - `.nojekyll`
-   - `README.md`
-3. Go to **Settings → Pages**.
-4. Under **Build and deployment**, select **Deploy from a branch**.
-5. Select branch `main` and folder `/root`.
-6. Save.
+- `index.html`
+- `.nojekyll`
+- `README.md`
 
-Your site will be available at:
+Then go to **Settings → Pages → Deploy from a branch → main → /(root)**.
 
-```txt
-https://YOUR-USERNAME.github.io/YOUR-REPOSITORY-NAME/
-```
-
-## If you still see an API key error
-
-Your GitHub site is probably still serving an older `index.html` using MapTiler.
-
-Check this:
-
-1. Open your GitHub repository.
-2. Open `index.html`.
-3. Use search for `maptiler`, `api.maptiler`, or `key=`.
-4. If you find any of those, replace the file with this ZIP's `index.html`.
-5. Commit the change and wait for GitHub Pages to redeploy.
-
-Sometimes GitHub Pages takes a short moment to update after a commit. Refresh with Ctrl+F5 / Cmd+Shift+R.
+If the published page still says **API Key required**, GitHub Pages is serving a different/older file. Open the live page source and search for `maptiler`. If it appears, replace the repository-root `index.html` with the one in this ZIP and redeploy.

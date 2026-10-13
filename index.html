@@ -20,7 +20,6 @@
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; overflow: hidden; touch-action: manipulation; }
     #map { width: 100vw; height: 100vh; background: #08111f; filter: saturate(.82) contrast(1.08); z-index: 0; }
-    .leaflet-control-attribution { display: none; }
     .panel { position: absolute; z-index: 1000; background: var(--panel); border: 1px solid rgba(255,255,255,.10); box-shadow: 0 18px 60px rgba(0,0,0,.35); backdrop-filter: blur(16px); }
     .header { top: 16px; left: 16px; max-width: 370px; padding: 14px 16px; border-radius: 18px; opacity: .93; }
     .top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -285,11 +284,13 @@
     function isValidRoute(route) { return route && typeof route === 'object' && typeof route.period === 'string' && typeof route.genre === 'string' && isValidPlace(route.from) && isValidPlace(route.to) && Array.isArray(route.camera) && route.camera.length === 3; }
     const routes = rawRoutes.filter(isValidRoute);
 
-    const map = L.map('map', { zoomControl: false, worldCopyJump: true, attributionControl: false, tap: true, dragging: true }).setView(isMobile ? [20, 10] : [26, 12], isMobile ? 2 : 3);
+    const map = L.map('map', { zoomControl: false, worldCopyJump: true, attributionControl: true, tap: true, dragging: true }).setView(isMobile ? [20, 10] : [26, 12], isMobile ? 2 : 3);
 
-    // API-key-free tile layers. No MapTiler key is required.
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19 }).addTo(map);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 19, pane: 'shadowPane' }).addTo(map);
+    // OpenStreetMap raster tiles: no API key or account required.
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
     const markers = {}, labels = [], filterLines = [];
     let hoverLabel = null, selectedCity = null, mainLine = null, glowLine = null, flowTag = null, index = 0, timer = null, isPlaying = false;

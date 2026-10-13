@@ -289,72 +289,84 @@
 
     const map = L.map('map', { zoomControl: false, worldCopyJump: true, attributionControl: false, tap: true, dragging: true }).setView(isMobile ? [20, 10] : [26, 12], isMobile ? 2 : 3);
 
-    // No external basemap tiles are loaded in this build.
-    // This avoids all tile-provider key errors and keeps the map dark; a local rough world layer is drawn below.
+    // Realistic vector basemap, no tile provider and no API key.
+    // It loads a Natural Earth country GeoJSON from GitHub's raw CDN, then draws it as dark Leaflet vectors.
+    // This is much more detailed than the previous hand-made continent shapes. If the fetch is blocked,
+    // a small local fallback layer appears so the app still opens.
+    const worldLayer = L.layerGroup().addTo(map);
 
-
-    // Local dark world layer: rough continent shapes embedded in this file.
-    // This gives visual geography without external map tiles or API keys.
-    const landStyle = {
-      color: 'rgba(125, 161, 190, .52)',
-      weight: 1,
-      fillColor: '#102a43',
-      fillOpacity: .48,
-      interactive: false
-    };
-
-    const landGlowStyle = {
-      color: 'rgba(56, 189, 248, .08)',
-      weight: 8,
-      fillColor: '#0b2138',
-      fillOpacity: .20,
-      interactive: false
-    };
-
-    const continents = [
-      // North America
-      [[72,-168],[70,-140],[60,-125],[55,-105],[50,-95],[49,-70],[58,-58],[52,-55],[45,-67],[30,-82],[19,-97],[15,-105],[23,-115],[32,-125],[43,-125],[52,-135],[58,-150],[64,-165]],
-      // Central America / Caribbean visual bridge
-      [[22,-106],[20,-96],[16,-88],[14,-82],[10,-78],[8,-82],[12,-91],[16,-101]],
-      // South America
-      [[12,-81],[8,-72],[5,-61],[-2,-50],[-10,-44],[-22,-43],[-35,-55],[-53,-70],[-48,-76],[-30,-72],[-15,-76],[0,-80]],
-      // Greenland
-      [[83,-73],[80,-28],[70,-18],[60,-44],[62,-62],[72,-72]],
-      // Europe + Asia
-      [[72,-10],[68,20],[70,60],[66,100],[60,150],[48,145],[42,120],[30,105],[24,80],[18,72],[8,78],[7,100],[0,105],[-8,100],[-10,80],[5,60],[15,45],[28,35],[35,25],[34,10],[44,0],[50,-10],[58,-8]],
-      // Africa
-      [[37,-17],[32,10],[30,32],[12,43],[-5,40],[-20,35],[-35,22],[-34,16],[-22,12],[-8,10],[2,2],[10,-8],[22,-16]],
-      // Arabian peninsula / India / SE Asia simplified
-      [[30,35],[24,52],[15,58],[12,45],[18,38]],
-      [[25,68],[22,78],[12,80],[8,73],[18,68]],
-      [[20,96],[14,105],[2,110],[-6,105],[0,98],[10,95]],
-      // Australia
-      [[-10,113],[-16,130],[-25,153],[-38,146],[-35,118],[-22,112]],
-      // Madagascar
-      [[-12,48],[-18,51],[-26,48],[-22,44]],
-      // Japan / island arc proxy
-      [[45,140],[38,143],[32,138],[35,132]],
-      // New Zealand proxy
-      [[-35,172],[-41,176],[-46,169],[-41,166]]
-    ];
-
-    const landGroup = L.layerGroup().addTo(map);
-    continents.forEach(shape => {
-      L.polygon(shape, landGlowStyle).addTo(landGroup);
-      L.polygon(shape, landStyle).addTo(landGroup);
-    });
-
-    // Graticule lines, also local/no API.
-    for (let lat = -60; lat <= 75; lat += 15) {
-      L.polyline([[lat, -180], [lat, 180]], {
-        color: 'rgba(148,163,184,.12)', weight: 1, interactive: false
-      }).addTo(landGroup);
+    function addGraticule() {
+      for (let lat = -60; lat <= 75; lat += 15) {
+        L.polyline([[lat, -180], [lat, 180]], {
+          color: 'rgba(148,163,184,.12)', weight: 1, interactive: false
+        }).addTo(worldLayer);
+      }
+      for (let lng = -180; lng <= 180; lng += 30) {
+        L.polyline([[-65, lng], [80, lng]], {
+          color: 'rgba(148,163,184,.10)', weight: 1, interactive: false
+        }).addTo(worldLayer);
+      }
     }
-    for (let lng = -180; lng <= 180; lng += 30) {
-      L.polyline([[-65, lng], [80, lng]], {
-        color: 'rgba(148,163,184,.10)', weight: 1, interactive: false
-      }).addTo(landGroup);
+
+    function addRealWorldMap(geojson) {
+      L.geoJSON(geojson, {
+        pane: 'overlayPane',
+        interactive: false,
+        style: feature => {
+          const continent = feature?.properties?.CONTINENT || '';
+          const fill = continent === 'Africa' ? '#12304d'
+            : continent === 'Europe' ? '#132b46'
+            : continent === 'Asia' ? '#102a43'
+            : continent === 'North America' ? '#0f2a46'
+            : continent === 'South America' ? '#11324a'
+            : continent === 'Oceania' ? '#10283d'
+            : '#0c2034';
+          return {
+            color: 'rgba(180, 205, 225, .35)',
+            weight: .7,
+            fillColor: fill,
+            fillOpacity: .58
+          };
+        }
+      }).addTo(worldLayer);
+
+      L.geoJSON(geojson, {
+        interactive: false,
+        style: {
+          color: 'rgba(56, 189, 248, .06)',
+          weight: 5,
+          fillOpacity: 0
+        }
+      }).addTo(worldLayer);
     }
+
+    function addFallbackWorldMap() {
+      const landStyle = {
+        color: 'rgba(125, 161, 190, .52)',
+        weight: 1,
+        fillColor: '#102a43',
+        fillOpacity: .48,
+        interactive: false
+      };
+      const continents = [
+        [[72,-168],[70,-140],[60,-125],[55,-105],[50,-95],[49,-70],[58,-58],[52,-55],[45,-67],[30,-82],[19,-97],[15,-105],[23,-115],[32,-125],[43,-125],[52,-135],[58,-150],[64,-165]],
+        [[12,-81],[8,-72],[5,-61],[-2,-50],[-10,-44],[-22,-43],[-35,-55],[-53,-70],[-48,-76],[-30,-72],[-15,-76],[0,-80]],
+        [[83,-73],[80,-28],[70,-18],[60,-44],[62,-62],[72,-72]],
+        [[72,-10],[68,20],[70,60],[66,100],[60,150],[48,145],[42,120],[30,105],[24,80],[18,72],[8,78],[7,100],[0,105],[-8,100],[-10,80],[5,60],[15,45],[28,35],[35,25],[34,10],[44,0],[50,-10],[58,-8]],
+        [[37,-17],[32,10],[30,32],[12,43],[-5,40],[-20,35],[-35,22],[-34,16],[-22,12],[-8,10],[2,2],[10,-8],[22,-16]],
+        [[-10,113],[-16,130],[-25,153],[-38,146],[-35,118],[-22,112]]
+      ];
+      continents.forEach(shape => L.polygon(shape, landStyle).addTo(worldLayer));
+    }
+
+    addGraticule();
+    fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson')
+      .then(response => {
+        if (!response.ok) throw new Error('World vector map could not be loaded');
+        return response.json();
+      })
+      .then(addRealWorldMap)
+      .catch(() => addFallbackWorldMap());
 
     const markers = {}, labels = [], filterLines = [];
     let hoverLabel = null, selectedCity = null, mainLine = null, glowLine = null, flowTag = null, index = 0, timer = null, isPlaying = false;

@@ -1,31 +1,25 @@
-# Colonialism Expansion Flow Map — Realistic local dark map
+# Colonialism Expansion Flow Map — realistic vector edition
 
 GitHub Pages-ready project.
 
-This version uses a local vector world layer in `assets/world-vectors.js` instead of online basemap tiles.
-It includes land shapes, coastlines, country borders, and grid lines, styled as a dark map.
+This version does **not** use MapTiler, Mapbox, CARTO, OpenStreetMap raster tiles, or any API key.
 
-No MapTiler, Mapbox, CARTO, or OpenStreetMap tile API key is required.
+It draws the basemap as Leaflet vector shapes from Natural Earth country geometry loaded from GitHub's raw CDN:
 
-## Files
+`https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson`
 
-```txt
-index.html
-README.md
-.nojekyll
-assets/world-vectors.js
-```
+So it is a real country-outline vector basemap, not hand-drawn continent blobs.
 
-## Publish on GitHub Pages
+## Upload to GitHub Pages
 
-1. Upload all files and the `assets` folder to the root of your repository.
-2. Go to **Settings → Pages**.
-3. Select **Deploy from a branch**.
-4. Choose `main` and `/root`.
-5. Hard refresh the live page after deployment.
+Upload these files to the root of your repository:
 
-## Important
+- `index.html`
+- `.nojekyll`
+- `README.md`
 
-If you still see “API Key required”, GitHub Pages is still serving an older `index.html`.
-Open the live page source and search for `maptiler`, `mapbox`, `cartocdn`, `tileLayer`, or `key=`.
-This version does not use those strings for a basemap.
+Then enable Pages: Settings → Pages → Deploy from branch → `main` → `/root`.
+
+## Note
+
+This version still needs internet access to load Leaflet from unpkg and the Natural Earth GeoJSON from GitHub raw. It needs **no map API key**.

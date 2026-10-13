@@ -1,13 +1,31 @@
-# Colonialism Expansion Flow Map
+# Colonialism Expansion Flow Map — Realistic local dark map
 
-GitHub Pages-ready version.
+GitHub Pages-ready project.
 
-This build uses a dark built-in background and **no external map tile provider**.
-It should not trigger MapTiler, Mapbox, CARTO, or other tile key errors.
+This version uses a local vector world layer in `assets/world-vectors.js` instead of online basemap tiles.
+It includes land shapes, coastlines, country borders, and grid lines, styled as a dark map.
 
-## Publish
+No MapTiler, Mapbox, CARTO, or OpenStreetMap tile API key is required.
 
-1. Upload `index.html`, `README.md`, and `.nojekyll` to the root of your GitHub repository.
-2. Go to Settings → Pages.
-3. Select `main` and `/root`.
-4. Save and hard-refresh the live page.
+## Files
+
+```txt
+index.html
+README.md
+.nojekyll
+assets/world-vectors.js
+```
+
+## Publish on GitHub Pages
+
+1. Upload all files and the `assets` folder to the root of your repository.
+2. Go to **Settings → Pages**.
+3. Select **Deploy from a branch**.
+4. Choose `main` and `/root`.
+5. Hard refresh the live page after deployment.
+
+## Important
+
+If you still see “API Key required”, GitHub Pages is still serving an older `index.html`.
+Open the live page source and search for `maptiler`, `mapbox`, `cartocdn`, `tileLayer`, or `key=`.
+This version does not use those strings for a basemap.

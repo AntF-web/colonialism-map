@@ -3,9 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Colonialism Expansion Flow Map</title>
+  <title>Colonialism / Colonialisme / Colonialismo — Interactive Map</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="assets/world-vectors.js"></script>
+  <script src="assets/vector-basemap.js"></script>
+  <script src="assets/es-translations.js"></script>
   <style>
     :root {
       --bg: #08111f;
@@ -24,7 +27,7 @@
     .leaflet-map-pane::before { content: ""; position: absolute; inset: -200vh -200vw; pointer-events: none; background-image: linear-gradient(rgba(148,163,184,.10) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.10) 1px, transparent 1px); background-size: 80px 80px; opacity: .32; }
     .leaflet-map-pane::after { content: ""; position: absolute; inset: -200vh -200vw; pointer-events: none; background: radial-gradient(circle at 50% 50%, transparent 0%, rgba(4,8,19,.35) 70%); }
     .panel { position: absolute; z-index: 1000; background: var(--panel); border: 1px solid rgba(255,255,255,.10); box-shadow: 0 18px 60px rgba(0,0,0,.35); backdrop-filter: blur(16px); }
-    .header { top: 16px; left: 16px; max-width: 370px; padding: 14px 16px; border-radius: 18px; opacity: .93; }
+    .header { top: 16px; left: 16px; max-width: 404px; padding: 14px 16px; border-radius: 18px; opacity: .93; }
     .top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
     h1 { margin: 0; font-size: clamp(20px, 2.6vw, 30px); line-height: 1; letter-spacing: -0.055em; }
     .small { margin: 9px 0 0; color: var(--muted); font-size: 12px; line-height: 1.35; }
@@ -76,8 +79,9 @@
     .leaflet-popup-content { margin: 12px 14px; font-size: 13px; line-height: 1.35; }
     @media (max-width: 760px) {
       #map { height: 100dvh; }
-      .header { top: max(10px, env(safe-area-inset-top)); left: 10px; width: min(286px, calc(100vw - 20px)); max-width: none; padding: 11px 13px; border-radius: 18px; opacity: .9; }
+      .header { top: max(10px, env(safe-area-inset-top)); left: 10px; width: min(332px, calc(100vw - 20px)); max-width: none; padding: 11px 13px; border-radius: 18px; opacity: .9; }
       .top-row { align-items: center; }
+      .top-row h1 { min-width: 0; font-size: 16px; }
       h1 { font-size: 17px; letter-spacing: -0.04em; }
       .small { display: none; }
       .legend { margin-top: 8px; gap: 7px 9px; font-size: 10px; }
@@ -92,7 +96,7 @@
       .city-label { display: none; }
       .hover-preview { display: none; }
       .node { width: 22px; height: 22px; }
-      .lang-btn { height: 26px; min-width: 31px; font-size: 10px; }
+      .lang-btn { height: 26px; min-width: 31px; padding: 0 5px; font-size: 10px; }
     }
     @media (max-width: 480px) { .legend { display: none; } .description { display: none; } .story-card { max-height: 28dvh; } }
   </style>
@@ -104,8 +108,9 @@
     <div class="top-row">
       <h1 id="appTitle">Colonialism: Expansion Flow Map</h1>
       <div class="lang-switch" aria-label="Language switcher">
-        <button class="lang-btn active" id="langEn" type="button">EN</button>
-        <button class="lang-btn" id="langFr" type="button">FR</button>
+        <button class="lang-btn active" id="langEn" type="button" aria-pressed="true">EN</button>
+        <button class="lang-btn" id="langFr" type="button" aria-pressed="false">FR</button>
+        <button class="lang-btn" id="langEs" type="button" aria-pressed="false">ES</button>
       </div>
     </div>
     <p class="small" id="appSubtitle">Click any city or territory to filter connected colonial routes. Hover for a quick preview. This map is a broad historical overview, using city markers as geographic proxies for larger imperial systems and colonized regions.</p>
@@ -133,6 +138,7 @@
 
     const isMobile = window.matchMedia('(max-width: 760px)').matches;
     let currentLang = 'en';
+    try { const saved = localStorage.getItem('colonialism-map-language'); if (['en','fr','es'].includes(saved)) currentLang = saved; } catch (_) {}
 
     const i18n = {
       en: {
@@ -148,11 +154,20 @@
         legendPower: 'puissance impériale', legendTerritory: 'territoire colonisé', legendTimeline: 'chronologie', legendFilter: 'filtre', all: 'TOUT',
         placeFilter: 'filtre par lieu', connectedFlow: 'flux connecté', connectedFlows: 'flux connectés', filterDescription: 'Ce filtre montre toutes les routes cartographiées liées à ce centre impérial ou à ce territoire colonisé.', noConnectedRoutes: 'Aucune route connectée pour le moment.', type: 'type', period: 'période', impacts: 'Impacts', filter: 'Filtre',
         defaultLegacy: 'travail forcé, répression culturelle, extraction des ressources, frontières artificielles et résistances anticoloniales.'
+      },
+      es: {
+        appTitle: 'Colonialismo: mapa cronológico de la expansión',
+        appSubtitle: 'Haz clic en una ciudad o territorio para explorar sus vínculos coloniales. Pasa el cursor para ver un resumen. Es una visión histórica general: las ciudades son referencias geográficas de territorios y sistemas imperiales más amplios.',
+        legendPower: 'potencia imperial', legendTerritory: 'territorio colonizado', legendTimeline: 'cronología', legendFilter: 'filtro', all: 'TODOS',
+        placeFilter: 'filtro por lugar', connectedFlow: 'conexión', connectedFlows: 'conexiones',
+        filterDescription: 'Este filtro muestra todas las rutas cartografiadas relacionadas con este centro imperial o territorio colonizado.',
+        noConnectedRoutes: 'Todavía no hay rutas conectadas.', type: 'tipo', period: 'período', impacts: 'Consecuencias', filter: 'Filtro',
+        defaultLegacy: 'trabajo forzado, represión cultural, extracción de recursos, fronteras impuestas y resistencias anticoloniales.'
       }
     };
 
     function tr(key) { return i18n[currentLang][key] || i18n.en[key] || key; }
-    function local(obj, key) { return currentLang === 'fr' && obj.fr && obj.fr[key] ? obj.fr[key] : obj[key]; }
+    function local(obj, key) { const translation = obj[currentLang]; return translation && translation[key] ? translation[key] : obj[key]; }
 
     const places = {
       istanbul: ['Istanbul', [41.01, 28.97], 'origin', 'Ottoman imperial center linking Southeast Europe, the Middle East, and North Africa.', { name: 'Istanbul', note: 'Centre impérial ottoman reliant l’Europe du Sud-Est, le Moyen-Orient et l’Afrique du Nord.' }],
@@ -223,8 +238,8 @@
       addisAbaba: ['Addis Ababa', [8.98, 38.79], 'market', 'Proxy for Italy’s brief occupation of Ethiopia.', { name: 'Addis-Abeba', note: 'Repère pour la brève occupation italienne de l’Éthiopie.' }]
     };
 
-    function placeName(key) { const p = places[key]; return currentLang === 'fr' && p[4] ? p[4].name : p[0]; }
-    function placeNote(key) { const p = places[key]; return currentLang === 'fr' && p[4] ? p[4].note : p[3]; }
+    function placeName(key) { const p = places[key]; return currentLang === 'es' ? COLONIAL_ES.places[key].name : (currentLang === 'fr' && p[4] ? p[4].name : p[0]); }
+    function placeNote(key) { const p = places[key]; return currentLang === 'es' ? COLONIAL_ES.places[key].note : (currentLang === 'fr' && p[4] ? p[4].note : p[3]); }
 
     const rawRoutes = [
       { period: '1300s–1500s', genre: 'Ottoman expansion into the Balkans', fromName: 'Istanbul', toName: 'Sarajevo', description: 'The Ottoman Empire expanded across Southeast Europe through conquest, administration, taxation, and military control.', from: 'istanbul', to: 'sarajevo', type: 'land empire · military conquest', legacy: 'Imperial incorporation, taxation, hierarchy, and long-term regional restructuring.', fr: { period: 'XIVe–XVIe siècles', genre: 'Expansion ottomane dans les Balkans', fromName: 'Istanbul', toName: 'Sarajevo', description: 'L’Empire ottoman s’étend en Europe du Sud-Est par la conquête, l’administration, l’impôt et le contrôle militaire.', type: 'empire terrestre · conquête militaire', legacy: 'Incorporation impériale, taxation, hiérarchies et restructuration régionale durable.' }, camera: [43, 22, 5] },
@@ -283,90 +298,31 @@
       { period: '1930s', genre: 'Italian occupation of Ethiopia', fromName: 'Rome', toName: 'Addis Ababa', description: 'Italy briefly occupied Ethiopia in an attempt to consolidate a larger East African empire.', from: 'rome', to: 'addisAbaba', type: 'military occupation', legacy: 'Imperial violence and anti-colonial resistance.', fr: { period: 'années 1930', genre: 'Occupation italienne de l’Éthiopie', fromName: 'Rome', toName: 'Addis-Abeba', description: 'L’Italie occupe brièvement l’Éthiopie pour tenter de consolider un empire est-africain plus vaste.', type: 'occupation militaire', legacy: 'Violence impériale et résistance anticoloniale.' }, camera: [18, 26, 4] }
     ];
 
+    // Enrich every historical route with its complete Spanish translation.
+    rawRoutes.forEach(route => {
+      const translation = COLONIAL_ES.routes[route.genre];
+      if (!translation) console.warn('Missing Spanish route:', route.genre);
+      route.es = {
+        ...(translation || {}),
+        period: COLONIAL_ES.periods[route.period] || route.period,
+        fromName: COLONIAL_ES.places[route.from]?.name || route.fromName,
+        toName: route.to === 'praia' ? 'Cabo Verde' : (COLONIAL_ES.places[route.to]?.name || route.toName)
+      };
+    });
+
     function isValidPlace(key) { return Boolean(places[key] && Array.isArray(places[key][1]) && places[key][1].length === 2); }
     function isValidRoute(route) { return route && typeof route === 'object' && typeof route.period === 'string' && typeof route.genre === 'string' && isValidPlace(route.from) && isValidPlace(route.to) && Array.isArray(route.camera) && route.camera.length === 3; }
-    const routes = rawRoutes.filter(isValidRoute);
+    function routeStartYear(route) {
+      const value = route.period;
+      const year = parseInt(value, 10);
+      return /^\d{4}/.test(value) ? year : (year * 100 + 0);
+    }
+    const routes = rawRoutes.filter(isValidRoute).sort((a, b) => routeStartYear(a) - routeStartYear(b));
 
     const map = L.map('map', { zoomControl: false, worldCopyJump: true, attributionControl: false, tap: true, dragging: true }).setView(isMobile ? [20, 10] : [26, 12], isMobile ? 2 : 3);
 
-    // Realistic vector basemap, no tile provider and no API key.
-    // It loads a Natural Earth country GeoJSON from GitHub's raw CDN, then draws it as dark Leaflet vectors.
-    // This is much more detailed than the previous hand-made continent shapes. If the fetch is blocked,
-    // a small local fallback layer appears so the app still opens.
-    const worldLayer = L.layerGroup().addTo(map);
-
-    function addGraticule() {
-      for (let lat = -60; lat <= 75; lat += 15) {
-        L.polyline([[lat, -180], [lat, 180]], {
-          color: 'rgba(148,163,184,.12)', weight: 1, interactive: false
-        }).addTo(worldLayer);
-      }
-      for (let lng = -180; lng <= 180; lng += 30) {
-        L.polyline([[-65, lng], [80, lng]], {
-          color: 'rgba(148,163,184,.10)', weight: 1, interactive: false
-        }).addTo(worldLayer);
-      }
-    }
-
-    function addRealWorldMap(geojson) {
-      L.geoJSON(geojson, {
-        pane: 'overlayPane',
-        interactive: false,
-        style: feature => {
-          const continent = feature?.properties?.CONTINENT || '';
-          const fill = continent === 'Africa' ? '#12304d'
-            : continent === 'Europe' ? '#132b46'
-            : continent === 'Asia' ? '#102a43'
-            : continent === 'North America' ? '#0f2a46'
-            : continent === 'South America' ? '#11324a'
-            : continent === 'Oceania' ? '#10283d'
-            : '#0c2034';
-          return {
-            color: 'rgba(180, 205, 225, .35)',
-            weight: .7,
-            fillColor: fill,
-            fillOpacity: .58
-          };
-        }
-      }).addTo(worldLayer);
-
-      L.geoJSON(geojson, {
-        interactive: false,
-        style: {
-          color: 'rgba(56, 189, 248, .06)',
-          weight: 5,
-          fillOpacity: 0
-        }
-      }).addTo(worldLayer);
-    }
-
-    function addFallbackWorldMap() {
-      const landStyle = {
-        color: 'rgba(125, 161, 190, .52)',
-        weight: 1,
-        fillColor: '#102a43',
-        fillOpacity: .48,
-        interactive: false
-      };
-      const continents = [
-        [[72,-168],[70,-140],[60,-125],[55,-105],[50,-95],[49,-70],[58,-58],[52,-55],[45,-67],[30,-82],[19,-97],[15,-105],[23,-115],[32,-125],[43,-125],[52,-135],[58,-150],[64,-165]],
-        [[12,-81],[8,-72],[5,-61],[-2,-50],[-10,-44],[-22,-43],[-35,-55],[-53,-70],[-48,-76],[-30,-72],[-15,-76],[0,-80]],
-        [[83,-73],[80,-28],[70,-18],[60,-44],[62,-62],[72,-72]],
-        [[72,-10],[68,20],[70,60],[66,100],[60,150],[48,145],[42,120],[30,105],[24,80],[18,72],[8,78],[7,100],[0,105],[-8,100],[-10,80],[5,60],[15,45],[28,35],[35,25],[34,10],[44,0],[50,-10],[58,-8]],
-        [[37,-17],[32,10],[30,32],[12,43],[-5,40],[-20,35],[-35,22],[-34,16],[-22,12],[-8,10],[2,2],[10,-8],[22,-16]],
-        [[-10,113],[-16,130],[-25,153],[-38,146],[-35,118],[-22,112]]
-      ];
-      continents.forEach(shape => L.polygon(shape, landStyle).addTo(worldLayer));
-    }
-
-    addGraticule();
-    fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson')
-      .then(response => {
-        if (!response.ok) throw new Error('World vector map could not be loaded');
-        return response.json();
-      })
-      .then(addRealWorldMap)
-      .catch(() => addFallbackWorldMap());
+    // Detailed local Natural Earth-style land/coast/country vectors, no tile servers or API keys.
+    const worldLayer = addLocalDarkVectorBasemap(map);
 
     const markers = {}, labels = [], filterLines = [];
     let hoverLabel = null, selectedCity = null, mainLine = null, glowLine = null, flowTag = null, index = 0, timer = null, isPlaying = false;
@@ -453,7 +409,9 @@
       });
     }
     function applyLanguage(lang) {
+      if (!['en', 'fr', 'es'].includes(lang)) return;
       currentLang = lang; document.documentElement.lang = lang;
+      try { localStorage.setItem('colonialism-map-language', lang); } catch (_) {}
       document.getElementById('appTitle').textContent = tr('appTitle');
       document.getElementById('appSubtitle').textContent = tr('appSubtitle');
       document.getElementById('legendPower').textContent = tr('legendPower');
@@ -463,14 +421,19 @@
       reset.textContent = tr('all');
       document.getElementById('langEn').classList.toggle('active', lang === 'en');
       document.getElementById('langFr').classList.toggle('active', lang === 'fr');
+      document.getElementById('langEs').classList.toggle('active', lang === 'es');
+      ['en', 'fr', 'es'].forEach(code => {
+        document.getElementById('lang' + code[0].toUpperCase() + code.slice(1)).setAttribute('aria-pressed', String(lang === code));
+      });
       Object.entries(markers).forEach(([key, marker]) => marker.bindPopup(`<strong>${escapeHtml(placeName(key))}</strong><br>${escapeHtml(placeNote(key))}`));
       updateLabels(); clearHover();
       if (selectedCity) filterCity(selectedCity); else setActive(index, true);
     }
     document.getElementById('langEn').addEventListener('click', () => applyLanguage('en'));
     document.getElementById('langFr').addEventListener('click', () => applyLanguage('fr'));
+    document.getElementById('langEs').addEventListener('click', () => applyLanguage('es'));
 
-    setActive(0);
+    applyLanguage(currentLang);
   </script>
 </body>
 </html>

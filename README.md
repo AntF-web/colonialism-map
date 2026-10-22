@@ -1,25 +1,27 @@
-# Colonialism Expansion Flow Map — realistic vector edition
+# Colonialism Map — English / Français / Español
 
-GitHub Pages-ready project.
+GitHub Pages-ready historical flow map with a **local, detailed dark vector world basemap** and three complete interface/data translations (EN / FR / ES).
 
-This version does **not** use MapTiler, Mapbox, CARTO, OpenStreetMap raster tiles, or any API key.
+## Publish on GitHub Pages
+1. Create a public GitHub repository.
+2. Upload **all the files and the `assets/` folder** from this project into the repository root.
+3. In **Settings → Pages**, select **Deploy from a branch** → `main` → `/(root)`.
+4. Visit `https://YOUR-USERNAME.github.io/YOUR-REPO/` after GitHub finishes deployment.
 
-It draws the basemap as Leaflet vector shapes from Natural Earth country geometry loaded from GitHub's raw CDN:
+## Features
+- Language selector EN / FR / ES, with choice saved in the browser when allowed.
+- Translated timeline titles, descriptions, period labels, context notes, impact notes, city names and popups.
+- Play/pause, route scrubbing, city filters, animated flows.
+- Local dark world geography (`assets/world-vectors.js`) with land, coasts and country outlines.
+- **No map service API key**: no MapTiler, Mapbox, CARTO or remote tile imagery.
+- The Leaflet library (CSS and JavaScript) is loaded from unpkg, so an Internet connection is still needed unless Leaflet is bundled locally.
 
-`https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson`
+## Files
+- `index.html`: page, timeline, multilingual UI and maps.
+- `assets/world-vectors.js`: local detailed world geometry.
+- `assets/vector-basemap.js`: Leaflet vector styling.
+- `assets/es-translations.js`: all Spanish data strings.
+- `.nojekyll`: GitHub Pages compatibility.
 
-So it is a real country-outline vector basemap, not hand-drawn continent blobs.
-
-## Upload to GitHub Pages
-
-Upload these files to the root of your repository:
-
-- `index.html`
-- `.nojekyll`
-- `README.md`
-
-Then enable Pages: Settings → Pages → Deploy from branch → `main` → `/root`.
-
-## Note
-
-This version still needs internet access to load Leaflet from unpkg and the Natural Earth GeoJSON from GitHub raw. It needs **no map API key**.
+### Historical note
+The routes are schematic connections between imperial centers and representative cities, not the exact geographic boundaries or years of every colony. Some decades and centuries are approximate. The map is an educational overview, not a substitute for more detailed historical sources.
